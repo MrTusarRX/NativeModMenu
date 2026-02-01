@@ -8,6 +8,16 @@
 
 JavaVM *antik = nullptr;
 JNIEnv *antikYt = nullptr;
+
+namespace InterfaceMethods {
+    void *Icon = nullptr;
+    void *IconWebViewData = nullptr;
+    void *getFeatureList = nullptr;
+    void *settingsList = nullptr;
+    void *Changes = nullptr;
+    void *setTitleText = nullptr;
+    void *setHeadingText = nullptr;
+};
 jclass menuClass;
 /*
  * 🔐 Your prebuilt FloatingModMenu.dex HEX
@@ -48,6 +58,24 @@ static jobjectArray HEX(JNIEnv* env, const std::string& hex) {
 }
 
 /*
+ * Register JNI methods
+ */
+static void RegisterMethods(JNIEnv *env) {
+    JNINativeMethod NativeMethodsClassMethods[] = {
+            {"Icon", "()Ljava/lang/String;", InterfaceMethods::Icon},
+            {"IconWebViewData", "()Ljava/lang/String;", InterfaceMethods::IconWebViewData},
+            {"getFeatureList", "()[Ljava/lang/String;", InterfaceMethods::getFeatureList},
+            {"settingsList", "()[Ljava/lang/String;", InterfaceMethods::settingsList},
+            {"Changes", "(Landroid/content/Context;ILjava/lang/String;IZLjava/lang/String;)V", InterfaceMethods::Changes},
+            {"setTitleText", "(Landroid/widget/TextView;)V", InterfaceMethods::setTitleText},
+            {"setHeadingText", "(Landroid/widget/TextView;)V", InterfaceMethods::setHeadingText},
+    };
+    env->RegisterNatives(menuClass, NativeMethodsClassMethods,
+                         sizeof(NativeMethodsClassMethods) /
+                         sizeof(NativeMethodsClassMethods[0]));
+}
+
+/*
  * 🧠 Load dex + call FloatingModMenu.antik(Context)
  */
 static void loadDex(JNIEnv* env, jobject context) {
@@ -85,7 +113,7 @@ static void loadDex(JNIEnv* env, jobject context) {
     
     if (!menuClass) return;
     menuClass = (jclass) env->NewGlobalRef(menuClass);
-
+    RegisterMethods(env);
     // static void antik(Context)
     jmethodID antikMethod = env->GetStaticMethodID(
             menuClass,

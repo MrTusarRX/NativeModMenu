@@ -119,9 +119,6 @@ public class FloatingModMenu {
 
     native String[] settingsList();
 
-
-
-
     public static native void Changes(Context con, int fNum, String fName, int i, boolean bool, String str);
 
 

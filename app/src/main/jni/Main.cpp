@@ -57,11 +57,7 @@ void *hack_thread(void *) {
     return NULL;
 }
 
-extern "C" {
-
-JNIEXPORT jobjectArray
-JNICALL
-Java_uk_lgl_modmenu_FloatingModMenu_getFeatureList(JNIEnv *env, jobject context) {
+jobjectArray  getFeatureList(JNIEnv *env, jobject context) {
     jobjectArray ret;
 
     const char *features[] = {
@@ -78,8 +74,7 @@ Java_uk_lgl_modmenu_FloatingModMenu_getFeatureList(JNIEnv *env, jobject context)
     return (ret);
 }
 
-JNIEXPORT void JNICALL
-Java_uk_lgl_modmenu_FloatingModMenu_Changes(JNIEnv *env, jclass clazz, jobject obj, jint featNum, jstring featName, jint value, jboolean boolean, jstring str) {
+void Changes(JNIEnv *env, jclass clazz, jobject obj, jint featNum, jstring featName, jint value, jboolean boolean, jstring str) {
 
     switch (featNum) {
         case 1:
@@ -87,11 +82,18 @@ Java_uk_lgl_modmenu_FloatingModMenu_Changes(JNIEnv *env, jclass clazz, jobject o
             break;
     }
 }
-}
 
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
     antik = vm;
+    InterfaceMethods::Icon = (void*) Icon;
+    InterfaceMethods::IconWebViewData = (void *) IconWebViewData;
+    InterfaceMethods::Changes = (void *) Changes;
+    InterfaceMethods::getFeatureList = (void *) getFeatureList;
+    InterfaceMethods::settingsList = (void *) settingsList;
+    InterfaceMethods::setTitleText = (void *) setTitleText;
+    InterfaceMethods::setHeadingText = (void *) setHeadingText;
+
     binJava();
     return JNI_VERSION_1_6;
 }

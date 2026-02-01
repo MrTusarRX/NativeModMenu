@@ -12,6 +12,16 @@
 extern JavaVM *antik;
 extern JNIEnv *antikYt;
 
+namespace InterfaceMethods {
+    extern void *Icon;
+    extern void *IconWebViewData;
+    extern void *getFeatureList;
+    extern void *settingsList;
+    extern void *Changes;
+    extern void *setTitleText;
+    extern void *setHeadingText;
+}
+
 void binJava();
 
 
