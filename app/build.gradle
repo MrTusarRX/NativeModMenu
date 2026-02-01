@@ -1,11 +1,14 @@
 import com.android.build.gradle.tasks.ExternalNativeBuildTask
+import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.android.application)
 }
+
 class JavaDex {
-    public static String xxd_p(String file) {
+    public static String xxd_p(String filePath) {
         StringBuilder hexString = new StringBuilder()
+        File file = new File(filePath)
         try (FileInputStream fis = new FileInputStream(file)) {
             byte[] data = fis.readAllBytes()
             for (byte b : data) {
@@ -14,35 +17,24 @@ class JavaDex {
         }
         return hexString.toString()
     }
-
-    public static String base64_encode(String file) throws IOException {
-        byte[] data
-        try (FileInputStream fis = new FileInputStream(file)) {
-            data = fis.readAllBytes()
-        }
-        return Base64.getEncoder().encodeToString(data)
-    }
 }
+
 android {
     namespace 'uk.lgl'
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk 36
 
     defaultConfig {
         applicationId "uk.lgl"
         minSdk 28
         targetSdk 36
         versionCode 1
+        versionName "1.0"
 
         ndk {
             abiFilters 'arm64-v8a'
         }
 
-        versionName "1.0"
         multiDexEnabled false
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -52,63 +44,47 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
-    }
-
-    buildFeatures {
-        buildConfig = true
-        aidl = true
-        prefab = true
-    }
     externalNativeBuild {
         ndkBuild {
             path file('src/main/jni/Android.mk')
         }
     }
 
-    tasks.register("Dex2CppAnd8Up") {
-        outputs.upToDateWhen { false }
+    android.applicationVariants.all { variant ->
+        def variantName = variant.name.capitalize()
+        def taskName = "Dex2CppAnd8Up${variantName}"
 
-        inputs.files fileTree(dir: "${project.projectDir}/src/main/java", includes: ['**/*.java'])
-        outputs.file("${project.projectDir}/src/main/jni/JavaGPP/Interface/OreoOrMore.h")
+        def customTask = tasks.register(taskName) {
+            outputs.upToDateWhen { false }
 
-        doFirst {
-            def dexPath = "${project.buildDir}/intermediates/dex/debug/mergeDexDebug/classes.dex"
+            def mergeDexTask = tasks.findByName("mergeDex${variantName}")
+            if (mergeDexTask) {
+                dependsOn mergeDexTask
+            }
 
-            String string = JavaDex.xxd_p(dexPath)
+            doLast {
+                def dexDir = file("${project.buildDir}/intermediates/dex/${variant.name}/mergeDex${variantName}")
+                def dexFiles = fileTree(dir: dexDir, include: "**/classes.dex")
 
-            def file = new File(project.projectDir, "src/main/jni/JavaGPP/Interface/OreoOrMore.h")
-            file.parentFile.mkdirs()
+                if (dexFiles.isEmpty()) {
+                    throw new GradleException("classes.dex not found for ${variant.name} in ${dexDir}")
+                }
 
-            file.write("#define OreoOrMore \"${string}\"")
+                def dexFile = dexFiles.first()
+                String hexString = JavaDex.xxd_p(dexFile.absolutePath)
+                def headerFile = file("${project.projectDir}/src/main/jni/JavaGPP/Interface/OreoOrMore.h")
 
-            println "Dex2CppAnd8Up: Header generated successfully."
-        }
-    }
-
-    tasks.register("Dex2Cpp") {
-        dependsOn "Dex2CppAnd8Up"
-    }
-    tasks.withType(ExternalNativeBuildTask).configureEach { compileTask ->
-        compileTask.dependsOn "Dex2Cpp"
-    }
-    tasks.all { task ->
-        if (task.name == 'buildCMakeDebug[armeabi-v7a]') {
-            task.dependsOn "Dex2Cpp"
-        }
-
-        if (task.name == 'configureCMakeDebug[arm64-v8a]') {
-            task.dependsOn "Dex2Cpp"
+                headerFile.parentFile.mkdirs()
+                headerFile.write("#define OreoOrMore \"${hexString}\"\n")
+                println ">>> Success: Generated header for ${variantName}"
+            }
         }
 
-        if (task.name == 'assembleDebug') {
-            task.dependsOn "Dex2Cpp"
+        tasks.configureEach { task ->
+            if (task.name.startsWith("buildNdkBuild${variantName}") ||
+                    task.name.startsWith("externalNativeBuild${variantName}")) {
+                task.dependsOn customTask
+            }
         }
     }
-}
-
-dependencies {
-
 }
